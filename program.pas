@@ -66,7 +66,30 @@ var
     isStarted: boolean = false;
     isPaused: boolean = false;
     score: integer = 0;
+
+procedure GetKey(var code: integer);
+var
+    c: char;
+begin
+    c := ReadKey;
+    if c = #0 then
+    begin
+        c := ReadKey;
+        code := -ord(c);
+    end
+    else
+    begin
+        code := ord(c);
+    end
+end;
     
+procedure createPoint(var point: ppoint; x, y: integer);
+begin
+    new(point);
+    point^.x := x;
+    point^.y := y;
+    point^.next := nil;    
+end;
 
 procedure addPoint(var tempFigure: pfigure; x, y: integer);
 var
@@ -74,20 +97,40 @@ var
 begin
     if tempFigure^.firstPoint = nil then
     begin
-        new(tempFigure^.firstPoint);
-        tempFigure^.firstPoint^.x := x;
-        tempFigure^.firstPoint^.y := y;
-        tempFigure^.firstPoint^.next := nil;
+        createPoint(tempFigure^.firstPoint, x, y);
         tempFigure^.lastPoint := tempFigure^.firstPoint;
     end
     else 
     begin
-        new(tempFigure^.lastPoint^.next);
-        tempPoint := tempFigure^.lastPoint^.next;
-        tempPoint^.x := x;
-        tempPoint^.y := y;
-        tempPoint^.next := nil;
-        tempFigure^.lastPoint := tempPoint;
+        createPoint(tempPoint, x, y);
+        tempFigure^.lastPoint^.next := tempPoint;
+        tempFigure^.lastPoint := tempFigure^.lastPoint^.next;
+        tempPoint := nil;
+    end;
+end;
+
+procedure clonePoint(var point: ppoint; var newPoint: ppoint);
+begin
+    newPoint^.x := point^.x;
+    newPoint^.y := point^.y;
+end;
+
+procedure printPoint(var screen: pscreen; x, y: integer; ch: char);
+var 
+    absX: integer;
+    absY: integer;
+    i: integer;
+    j: integer;
+begin
+    absX := screen^.posX + x * pointWidth;
+    absY := screen^.posY + y * pointHeight;
+    for i := absX to absX + pointWidth - 1 do
+    begin
+        for j := absY to absY + pointHeight - 1  do
+        begin
+            GotoXY(i, j);
+            write(ch);
+        end;
     end;
 end;
 
@@ -112,6 +155,40 @@ begin
     initFigure(tempFigure, figures[randomIndex]);
 end;
 
+procedure addNewFigure(var figure: pfigure);
+begin
+    new(figure);
+    initRandomFigure(figure);
+end;
+
+procedure cloneFigure(var figure: pfigure; var newFigure: pfigure);
+var
+    point, newPoint: ppoint;
+begin
+    newFigure^.firstPoint := nil;
+    newFigure^.lastPoint  := nil;
+    newFigure^.x          := figure^.x;
+    newFigure^.y          := figure^.y;
+    
+    point := figure^.firstPoint;
+    new(newFigure^.firstPoint);
+    newPoint := newFigure^.firstPoint;
+
+    while point <> nil do
+    begin
+        clonePoint(point, newPoint);
+        point := point^.next;
+        if point <> nil then
+        begin
+            new(newPoint^.next);
+            newPoint := newPoint^.next;
+        end;
+    end;
+
+    new(newFigure^.lastPoint);
+    newFigure^.lastPoint := newPoint;
+end;
+
 procedure destroyFigure(var tempFigure: pfigure);
 var 
     currentPoint: ppoint;
@@ -126,25 +203,6 @@ begin
     end;
     dispose(tempFigure);
     tempFigure := nil;
-end;
-
-procedure printPoint(var screen: pscreen; x, y: integer; ch: char);
-var 
-    absX: integer;
-    absY: integer;
-    i: integer;
-    j: integer;
-begin
-    absX := screen^.posX + x * pointWidth;
-    absY := screen^.posY + y * pointHeight;
-    for i := absX to absX + pointWidth - 1 do
-    begin
-        for j := absY to absY + pointHeight - 1  do
-        begin
-            GotoXY(i, j);
-            write(ch);
-        end;
-    end;
 end;
 
 procedure printFigure(
@@ -220,109 +278,6 @@ begin
     dispose(cloneFirstPoint);
 
     setPosition(tempFigure, tempFigure^.x + shiftX, tempFigure^.y + shiftY);
-end;
-
-procedure renderHorizontalLine(y, startX, endX: integer);
-var 
-    i: integer;
-begin
-    for i := startX to endX do
-    begin
-        GotoXY(i, y);
-        write('-');
-    end;
-end;
-
-procedure renderVerticalLine(x, startY, endY: integer);
-var 
-    i: integer;
-begin
-    for i := startY to endY do
-    begin
-        GotoXY(x, i);
-        write('|');
-    end;
-end;
-
-
-procedure renderScreenBorders(var screen: pscreen);
-begin
-    renderVerticalLine(
-        screen^.posX - 1, 
-        screen^.posY - 1, 
-        screen^.posY + screen^.height 
-    );
-    renderVerticalLine(
-        screen^.posX + screen^.width, 
-        screen^.posY - 1, 
-        screen^.posY + screen^.height 
-    );
-    renderHorizontalLine(
-        screen^.posY - 1,
-        screen^.posX - 1,
-        screen^.posX + screen^.width   
-    );
-    renderHorizontalLine(
-        screen^.posY + screen^.height,
-        screen^.posX - 1,
-        screen^.posX + screen^.width   
-    );
-end;
-
-procedure GetKey(var code: integer);
-var
-    c: char;
-begin
-    c := ReadKey;
-    if c = #0 then
-    begin
-        c := ReadKey;
-        code := -ord(c);
-    end
-    else
-    begin
-        code := ord(c);
-    end
-end;
-
-procedure addNewFigure(var figure: pfigure);
-begin
-    new(figure);
-    initRandomFigure(figure);
-end;
-
-procedure clonePoint(var point: ppoint; var newPoint: ppoint);
-begin
-    newPoint^.x := point^.x;
-    newPoint^.y := point^.y;
-end;
-
-procedure cloneFigure(var figure: pfigure; var newFigure: pfigure);
-var
-    point, newPoint: ppoint;
-begin
-    newFigure^.firstPoint := nil;
-    newFigure^.lastPoint  := nil;
-    newFigure^.x          := figure^.x;
-    newFigure^.y          := figure^.y;
-    
-    point := figure^.firstPoint;
-    new(newFigure^.firstPoint);
-    newPoint := newFigure^.firstPoint;
-
-    while point <> nil do
-    begin
-        clonePoint(point, newPoint);
-        point := point^.next;
-        if point <> nil then
-        begin
-            new(newPoint^.next);
-            newPoint := newPoint^.next;
-        end;
-    end;
-
-    new(newFigure^.lastPoint);
-    newFigure^.lastPoint := newPoint;
 end;
 
 function getCornerCoords(figure: pfigure): cornerCoords;
@@ -638,17 +593,64 @@ procedure skipDown(
     var figure: pfigure;
     var matrix: pmatrix;
     var screen: pscreen;
-    var score: integer
+    var score: integer;
+    var moved: boolean
 );
-var 
-    moved: boolean = true;
 begin
     printFigure(screen, figure, ' ');
     repeat
         moveDown(figure, matrix, moved);
     until moved = false;
     rebuildMatrixAndDestroyFigure(figure, matrix, screen, score);
+    moved := true;
 end;
+
+procedure renderHorizontalLine(y, startX, endX: integer);
+var 
+    i: integer;
+begin
+    for i := startX to endX do
+    begin
+        GotoXY(i, y);
+        write('-');
+    end;
+end;
+
+procedure renderVerticalLine(x, startY, endY: integer);
+var 
+    i: integer;
+begin
+    for i := startY to endY do
+    begin
+        GotoXY(x, i);
+        write('|');
+    end;
+end;
+
+procedure renderScreenBorders(var screen: pscreen);
+begin
+    renderVerticalLine(
+        screen^.posX - 1, 
+        screen^.posY - 1, 
+        screen^.posY + screen^.height 
+    );
+    renderVerticalLine(
+        screen^.posX + screen^.width, 
+        screen^.posY - 1, 
+        screen^.posY + screen^.height 
+    );
+    renderHorizontalLine(
+        screen^.posY - 1,
+        screen^.posX - 1,
+        screen^.posX + screen^.width   
+    );
+    renderHorizontalLine(
+        screen^.posY + screen^.height,
+        screen^.posX - 1,
+        screen^.posX + screen^.width   
+    );
+end;
+
 
 procedure renderControlInfo(var screen: pscreen);
 var
@@ -736,6 +738,26 @@ begin
     end;
 end;
 
+procedure waitingPause(var screen: pscreen; var isPaused: boolean);
+var
+    x, y: integer;
+    key: integer = 0;
+begin
+    x := screen^.posX + screen^.width + 6;
+    y := screen^.posY + (screen^.height div 2) + 7;
+    while isPaused do
+    begin
+        if keypressed then
+        begin
+            GetKey(key);
+            if key = 112 then
+                isPaused := false;
+        end;
+        renderBlinkingString(x, y + 1, 500, '<pause>')
+    end;
+end;
+
+
 procedure renderScore(var screen: pscreen; score: integer);
 var
     x, y: integer;
@@ -783,25 +805,6 @@ begin
     renderNextFigure(mainScreen, nextFigure, filler);
 end;
 
-procedure waitingPause(var screen: pscreen; var isPaused: boolean);
-var
-    x, y: integer;
-    key: integer = 0;
-begin
-    x := screen^.posX + screen^.width + 6;
-    y := screen^.posY + (screen^.height div 2) + 7;
-    while isPaused do
-    begin
-        if keypressed then
-        begin
-            GetKey(key);
-            if key = 112 then
-                isPaused := false;
-        end;
-        renderBlinkingString(x, y + 1, 500, '<pause>')
-    end;
-end;
-
 begin
     clrscr;
     randomize;
@@ -813,20 +816,25 @@ begin
     mainScreen^.width := windowWidth * pointWidth;
     mainScreen^.height := windowHeight * pointHeight;
     
-    if (mainScreen^.width + 40) > ScreenWidth then
+    if (mainScreen^.width + 2 * sideSpace) > ScreenWidth then
     begin
         writeln('Not enough screen width, please resize window');
         exit;
     end;
 
-    if (mainScreen^.height + 10) > ScreenHeight then
+    if (mainScreen^.height + 2 * bottomSpace) > ScreenHeight then
     begin
         writeln('Not enough screen height, please resize window');
         exit;
     end;
 
-    mainScreen^.posX := ((ScreenWidth - (mainScreen^.width + 40)) div 2) + 20;
-    mainScreen^.posY := 3;
+    mainScreen^.posX := 
+        ((ScreenWidth-(mainScreen^.width + 2*sideSpace)) div 2) + sideSpace;
+
+    mainScreen^.posY := 
+        ((ScreenHeight - (mainScreen^.height + 2 * bottomSpace)) div 2) 
+        + bottomSpace;
+
     renderScreenBorders(mainScreen);
     startupScreen(mainScreen, mainMatrix);
 
@@ -854,8 +862,7 @@ begin
             end;
         end;
         
-        if tickTime > 0 then
-            printFigure(mainScreen, iFigure, '#'); 
+        printFigure(mainScreen, iFigure, filler); 
         
         if isPaused then
             waitingPause(mainScreen, isPaused);
@@ -877,10 +884,8 @@ begin
                     moveRight(iFigure, mainMatrix, moved);
                 -72:
                     rotate(iFigure, mainMatrix, moved);
-                -80:
-                    tickTime := defaultTickMs div 2;
                  32:
-                    skipDown(iFigure, mainMatrix, mainScreen, score);
+                    skipDown(iFigure, mainMatrix, mainScreen, score, moved);
                  112: 
                     isPaused := true;
                  27:
