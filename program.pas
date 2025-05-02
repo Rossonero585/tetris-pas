@@ -2,7 +2,7 @@ program tetris;
 uses crt;
 
 const
-    figuresCount = 7;
+    figuresCount = 7; 
     pointsCount = 4;
     filler = '#';
     pointHeight = 2;
@@ -829,7 +829,8 @@ begin
     end;
 
     mainScreen^.posX := 
-        ((ScreenWidth-(mainScreen^.width + 2*sideSpace)) div 2) + sideSpace;
+        ((ScreenWidth - (mainScreen^.width + 2 * sideSpace)) div 2) 
+        + sideSpace;
 
     mainScreen^.posY := 
         ((ScreenHeight - (mainScreen^.height + 2 * bottomSpace)) div 2) 
